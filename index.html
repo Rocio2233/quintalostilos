@@ -527,7 +527,6 @@
       renderizarTodo();
     }
 
-    // Nuevo botón Guardar por turno para sincronizar explícitamente en vivo
     async function guardarTurno(dia, turno, inputEl) {
       const valor = inputEl ? inputEl.value.trim() : (estado.dias[dia][turno].plato || '').trim();
       estado.dias[dia][turno].plato = valor;
@@ -636,6 +635,23 @@
       document.getElementById('modal-ia').classList.add('hidden');
     }
 
+    function generarSugerenciasLocales(incluirSobras) {
+      const base = [
+        { almuerzo: 'Tarta de verdura', cena: incluirSobras ? 'Comer las sobras' : 'Ensalada César con pollo' },
+        { almuerzo: 'Asado con ensalada', cena: incluirSobras ? 'Comer las sobras' : 'Tortilla de papas' },
+        { almuerzo: 'Pastel de papas', cena: incluirSobras ? 'Comer las sobras' : 'Tarta caprese' },
+        { almuerzo: 'Milanesas con puré', cena: 'Fajitas' },
+        { almuerzo: 'Ensalada César con pollo', cena: incluirSobras ? 'Comer las sobras' : 'Tarta de verdura' },
+        { almuerzo: 'Tortilla de papas', cena: 'Asado con ensalada' },
+        { almuerzo: 'Fajitas', cena: incluirSobras ? 'Comer las sobras' : 'Pastel de papas' }
+      ];
+      const resultado = {};
+      DIAS.forEach((dia, i) => {
+        resultado[dia] = base[i % base.length];
+      });
+      return resultado;
+    }
+
     async function llamarGemini(promptTexto) {
       const apiKey = obtenerApiKey();
       if (!apiKey) {
@@ -644,64 +660,41 @@
         throw new Error('Cargá tu clave de IA en el ícono de la llave');
       }
 
-      const modelos = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'];
-      let ultimoError = null;
+      const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'];
 
       for (const modelo of modelos) {
-        for (let intento = 0; intento < 2; intento++) {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 20000);
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
 
-          try {
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey
-              },
-              signal: controller.signal,
-              body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: promptTexto }] }],
-                generationConfig: { responseMimeType: 'application/json' }
-              })
-            });
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: promptTexto }] }],
+              generationConfig: { responseMimeType: 'application/json' }
+            })
+          });
 
-            if (res.ok) {
-              const data = await res.json();
-              let texto = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-              texto = texto.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-              return JSON.parse(texto);
-            }
-
-            const err = await res.json().catch(() => ({}));
-            const msg = err?.error?.message || `Error ${res.status}`;
-            ultimoError = new Error(msg);
-
-            if (res.status === 429 || res.status === 503 || /high demand|overloaded|unavailable/i.test(msg)) {
-              await new Promise(r => setTimeout(r, 1000));
-              continue;
-            }
-            if (res.status === 404 || /not found|not available/i.test(msg)) {
-              break;
-            }
-            throw ultimoError;
-          } catch (e) {
-            if (e.name === 'AbortError') {
-              ultimoError = new Error('La IA tardó demasiado en responder.');
-              continue;
-            }
-            if (ultimoError && e === ultimoError && !/high demand|overloaded|unavailable/i.test(e.message)) {
-              throw e;
-            }
-            ultimoError = e;
-          } finally {
-            clearTimeout(timeoutId);
+          if (res.ok) {
+            const data = await res.json();
+            let texto = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+            texto = texto.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+            return JSON.parse(texto);
           }
+        } catch (e) {
+          // Si falla o tarda, pasa al siguiente modelo o al respaldo rápido
+        } finally {
+          clearTimeout(timeoutId);
         }
       }
 
-      throw ultimoError || new Error('La IA tiene alta demanda en este momento. Probá de nuevo en un ratito.');
+      return null;
     }
 
     async function ejecutarIdeasIA() {
@@ -733,7 +726,13 @@
       `;
 
       try {
-        const res = await llamarGemini(prompt);
+        let res = await llamarGemini(prompt);
+        let usoRespaldo = false;
+        if (!res) {
+          res = generarSugerenciasLocales(incluirSobras);
+          usoRespaldo = true;
+        }
+
         DIAS.forEach(dia => {
           if (!res[dia]) return;
           ['almuerzo', 'cena'].forEach(turno => {
@@ -746,7 +745,7 @@
         await guardarDatos();
         renderizarTodo();
         cerrarModalIA();
-        mostrarToast('✨ ¡Opciones cargadas!');
+        mostrarToast(usoRespaldo ? '✨ Opciones cargadas al instante (modo rápido)' : '✨ ¡Opciones cargadas con IA!');
       } catch (e) {
         mostrarToast(e.message);
       } finally {

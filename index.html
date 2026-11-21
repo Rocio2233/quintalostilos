@@ -227,7 +227,7 @@
 
   <script>
     const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    const STORAGE_KEY = 'quintalostilos_v3';
+    const STORAGE_KEY = 'quintalostilos_v4';
     const FIREBASE_URL_KEY = 'quintalostilos_firebase_url';
     const FIREBASE_URL_FIJA = 'https://quinta-los-tilos-default-rtdb.firebaseio.com';
 
@@ -293,4 +293,518 @@
           { nombre: 'Cebolla', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
           { nombre: 'Morrón', cant4: 1, unidad: 'unid', rubro: 'Verdulería' },
           { nombre: 'Manteca', cant4: 50, unidad: 'g', rubro: 'Lácteos y Fiambres' },
-          { nombre: 'Leche', cant4: 0.3, unidad: 'L', rubro: 'Lácteos y Fiambres
+          { nombre: 'Leche', cant4: 0.3, unidad: 'L', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Queso cremoso', cant4: 200, unidad: 'g', rubro: 'Lácteos y Fiambres' }
+        ]
+      },
+      {
+        claves: ['milanesa', 'milanesas'],
+        items: [
+          { nombre: 'Milanesas', cant4: 1, unidad: 'kg', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Papa', cant4: 1.2, unidad: 'kg', rubro: 'Verdulería' },
+          { nombre: 'Manteca', cant4: 50, unidad: 'g', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Leche', cant4: 0.25, unidad: 'L', rubro: 'Lácteos y Fiambres' }
+        ]
+      },
+      {
+        claves: ['fajita', 'fajitas'],
+        items: [
+          { nombre: 'Rapiditas', cant4: 2, unidad: 'paq', rubro: 'Almacén y Panadería' },
+          { nombre: 'Carne o pollo en tiras', cant4: 0.9, unidad: 'kg', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Morrón', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Cebolla', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Palta', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Queso cheddar o cremoso', cant4: 200, unidad: 'g', rubro: 'Lácteos y Fiambres' }
+        ]
+      }
+    ];
+
+    function crearEstadoInicial() {
+      const dias = {};
+      DIAS.forEach(d => {
+        dias[d] = {
+          comensales: 6,
+          almuerzo: { plato: '', ingredientes: [] },
+          cena: { plato: '', ingredientes: [] }
+        };
+      });
+      return { dias, comprados: {}, updatedAt: Date.now() };
+    }
+
+    let estado = crearEstadoInicial();
+    let clavesCompras = {};
+    let contextoIng = null;
+    let pollTimer = null;
+
+    function obtenerFirebaseUrl() {
+      const guardada = (localStorage.getItem(FIREBASE_URL_KEY) || '').trim();
+      const raw = guardada || FIREBASE_URL_FIJA;
+      return raw.replace(/\/+$/, '');
+    }
+
+    function actualizarBadgeSync() {
+      const badge = document.getElementById('badge-sync');
+      if (obtenerFirebaseUrl()) {
+        badge.textContent = '🟢 Compartido en vivo';
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      } else {
+        badge.textContent = 'Local';
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+      }
+    }
+
+    function normalizarEstado(raw) {
+      const base = crearEstadoInicial();
+      if (!raw || !raw.dias) return base;
+      DIAS.forEach(d => {
+        if (raw.dias[d]) {
+          base.dias[d].comensales = Number(raw.dias[d].comensales) || 6;
+          ['almuerzo', 'cena'].forEach(t => {
+            if (raw.dias[d][t]) {
+              base.dias[d][t].plato = raw.dias[d][t].plato || '';
+              base.dias[d][t].ingredientes = Array.isArray(raw.dias[d][t].ingredientes) ? raw.dias[d][t].ingredientes : [];
+            }
+          });
+        }
+      });
+      base.comprados = raw.comprados || {};
+      base.updatedAt = raw.updatedAt || Date.now();
+      return base;
+    }
+
+    async function cargarDatos() {
+      const local = localStorage.getItem(STORAGE_KEY);
+      if (local) {
+        try { estado = normalizarEstado(JSON.parse(local)); } catch (e) {}
+      }
+      actualizarBadgeSync();
+      renderizarTodo();
+
+      if (obtenerFirebaseUrl()) {
+        await traerDeNube();
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(traerDeNube, 4000);
+      }
+    }
+
+    async function traerDeNube() {
+      const url = obtenerFirebaseUrl();
+      if (!url) return;
+      try {
+        const res = await fetch(`${url}/quintalostilos.json`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.updatedAt && data.updatedAt > (estado.updatedAt || 0)) {
+          estado = normalizarEstado(data);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
+          renderizarTodo();
+        }
+      } catch (e) {}
+    }
+
+    async function guardarDatos() {
+      estado.updatedAt = Date.now();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
+      const url = obtenerFirebaseUrl();
+      if (url) {
+        try {
+          await fetch(`${url}/quintalostilos.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(estado)
+          });
+        } catch (e) {}
+      }
+    }
+
+    function mostrarToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('opacity-0');
+      setTimeout(() => t.classList.add('opacity-0'), 3000);
+    }
+
+    function esTurnoSobras(texto) {
+      return !!texto && /sobra|recalentado|lo que qued/i.test(texto);
+    }
+
+    function redondearCantidad(valor, unidad) {
+      if (unidad === 'unid' || unidad === 'paq' || unidad === 'atados') return Math.max(1, Math.ceil(valor));
+      if (unidad === 'g') return Math.max(50, Math.round(valor / 50) * 50);
+      return Math.max(0.1, Math.round(valor * 10) / 10);
+    }
+
+    function detectarIngredientes(plato, comensales) {
+      if (!plato || esTurnoSobras(plato)) return [];
+      const limpio = plato.toLowerCase().trim();
+      const receta = RECETARIO_BASE.find(r => r.claves.some(c => limpio.includes(c)));
+      if (!receta) return [];
+      const factor = comensales / 4;
+      return receta.items.map(it => ({
+        nombre: it.nombre,
+        cantidad: redondearCantidad(it.cant4 * factor, it.unidad),
+        unidad: it.unidad,
+        rubro: it.rubro
+      }));
+    }
+
+    function cambiarComensalesDia(dia, valor) {
+      const anterior = estado.dias[dia].comensales || 6;
+      const actual = Math.max(1, Math.min(40, parseInt(valor, 10) || 1));
+      if (anterior === actual) return;
+      const factor = actual / anterior;
+      estado.dias[dia].comensales = actual;
+      ['almuerzo', 'cena'].forEach(turno => {
+        (estado.dias[dia][turno].ingredientes || []).forEach(ing => {
+          ing.cantidad = redondearCantidad(ing.cantidad * factor, ing.unidad);
+        });
+      });
+      guardarDatos();
+      renderizarTodo();
+    }
+
+    function actualizarPlato(dia, turno, valor) {
+      const platoTrim = valor.trim();
+      estado.dias[dia][turno].plato = platoTrim;
+      if (!platoTrim || esTurnoSobras(platoTrim)) {
+        estado.dias[dia][turno].ingredientes = [];
+      } else {
+        const detectados = detectarIngredientes(platoTrim, estado.dias[dia].comensales);
+        if (detectados.length > 0) {
+          estado.dias[dia][turno].ingredientes = detectados;
+        }
+      }
+      guardarDatos();
+      renderizarTodo();
+    }
+
+    function ponerSobrasEnTurno(dia, turno) {
+      estado.dias[dia][turno] = { plato: 'Comer las sobras', ingredientes: [] };
+      guardarDatos();
+      renderizarTodo();
+      mostrarToast('Sobras asignadas al turno');
+    }
+
+    function eliminarIngrediente(dia, turno, idx) {
+      estado.dias[dia][turno].ingredientes.splice(idx, 1);
+      guardarDatos();
+      renderizarTodo();
+    }
+
+    function abrirModalIngrediente(dia, turno) {
+      contextoIng = { dia, turno };
+      document.getElementById('subtitulo-modal-ing').textContent = `${dia} (${turno}) — ${estado.dias[dia][turno].plato || turno}`;
+      document.getElementById('ing-nombre').value = '';
+      document.getElementById('ing-cantidad').value = '1';
+      document.getElementById('modal-ingrediente').classList.remove('hidden');
+      setTimeout(() => document.getElementById('ing-nombre').focus(), 50);
+    }
+
+    function cerrarModalIngrediente() {
+      document.getElementById('modal-ingrediente').classList.add('hidden');
+      contextoIng = null;
+    }
+
+    function confirmarAgregarIngrediente() {
+      if (!contextoIng) return;
+      const nombre = document.getElementById('ing-nombre').value.trim();
+      const cantidad = parseFloat(document.getElementById('ing-cantidad').value) || 1;
+      const unidad = document.getElementById('ing-unidad').value;
+      const rubro = document.getElementById('ing-rubro').value;
+      if (!nombre) return mostrarToast('Escribí el nombre del producto');
+
+      const { dia, turno } = contextoIng;
+      if (!estado.dias[dia][turno].plato) estado.dias[dia][turno].plato = 'Comida casera';
+      estado.dias[dia][turno].ingredientes.push({ nombre, cantidad, unidad, rubro });
+      guardarDatos();
+      cerrarModalIngrediente();
+      renderizarTodo();
+    }
+
+    function asignarRapido(plato) {
+      for (const dia of DIAS) {
+        for (const turno of ['almuerzo', 'cena']) {
+          if (!estado.dias[dia][turno].plato.trim()) {
+            actualizarPlato(dia, turno, plato);
+            mostrarToast(`Agregado al ${turno} del ${dia}`);
+            return;
+          }
+        }
+      }
+      mostrarToast('Todos los turnos ya están ocupados');
+    }
+
+    function limpiarSemana() {
+      estado = crearEstadoInicial();
+      document.getElementById('panel-compras').classList.add('hidden');
+      guardarDatos();
+      renderizarTodo();
+      mostrarToast('Semana limpiada');
+    }
+
+    function escaparAtributo(txt) {
+      return String(txt || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function renderizarTurno(dia, turno) {
+      const esAlm = turno === 'almuerzo';
+      const data = estado.dias[dia][turno];
+      const plato = data.plato || '';
+      const ings = data.ingredientes || [];
+      const sobras = esTurnoSobras(plato);
+
+      return `
+        <div class="space-y-1.5 rounded-2xl p-2.5 ${sobras ? 'bg-amber-50/70 border border-amber-300' : 'bg-stone-50/70 border border-stone-200/70'}">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-[11px] font-bold uppercase tracking-wider ${esAlm ? 'text-amber-600' : 'text-indigo-600'}">
+              ${esAlm ? '☀️ Almuerzo' : '🌙 Cena'}
+            </label>
+            <div class="flex items-center gap-1">
+              ${!sobras && !plato ? `
+                <button type="button" onclick="ponerSobrasEnTurno('${dia}', '${turno}')" class="text-[10px] font-bold text-amber-700 hover:bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-200 transition">
+                  ♻️ + Sobras
+                </button>
+              ` : ''}
+              ${!sobras ? `
+                <button type="button" onclick="abrirModalIngrediente('${dia}', '${turno}')" class="text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 px-1.5 py-0.5 rounded-md border border-emerald-200 transition">
+                  + Ingrediente
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <input
+            type="text"
+            value="${escaparAtributo(plato)}"
+            onchange="actualizarPlato('${dia}', '${turno}', this.value)"
+            placeholder="${esAlm ? 'Ej: Tarta de verdura...' : 'Ej: Asado o tarta...'}"
+            class="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border ${sobras ? 'bg-white border-amber-300 text-amber-950 font-semibold' : 'bg-white border-stone-200 text-stone-800'} focus:outline-none focus:border-emerald-500 transition"
+          />
+
+          ${sobras ? `
+            <span class="inline-block text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">♻️ Sobras / Sin compras</span>
+          ` : (ings.length > 0 ? `
+            <div class="pt-1 flex flex-wrap gap-1">
+              ${ings.map((ing, idx) => `
+                <span class="inline-flex items-center gap-1 text-[10px] bg-white border border-stone-200 text-stone-700 px-2 py-0.5 rounded-lg">
+                  <span>${escaparAtributo(ing.nombre)}</span>
+                  <strong class="text-emerald-700">${ing.cantidad} ${ing.unidad}</strong>
+                  <button type="button" onclick="eliminarIngrediente('${dia}', '${turno}', ${idx})" class="text-stone-400 hover:text-rose-500 font-bold">&times;</button>
+                </span>
+              `).join('')}
+            </div>
+          ` : '')}
+        </div>
+      `;
+    }
+
+    function renderizarDias() {
+      const contenedor = document.getElementById('grid-dias');
+      if (!contenedor) return;
+      contenedor.innerHTML = DIAS.map(dia => {
+        const cant = estado.dias[dia].comensales || 6;
+        const alm = estado.dias[dia].almuerzo.plato || '';
+        const cen = estado.dias[dia].cena.plato || '';
+        return `
+          <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-2xs flex flex-col gap-3">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-2 gap-2">
+              <div class="flex items-center gap-2">
+                <h3 class="font-extrabold text-stone-800 text-sm">${dia}</h3>
+                <span class="text-[11px] font-semibold text-stone-400">${(alm ? 1 : 0) + (cen ? 1 : 0)}/2</span>
+              </div>
+              <div class="flex items-center gap-1 bg-stone-100 border border-stone-200/80 rounded-xl px-1.5 py-0.5">
+                <span class="text-[11px] font-bold text-stone-500">👥</span>
+                <button type="button" onclick="cambiarComensalesDia('${dia}', ${cant - 1})" class="w-6 h-6 rounded-lg bg-white text-stone-700 font-bold text-xs shadow-2xs">-</button>
+                <input
+                  type="number"
+                  min="1"
+                  max="40"
+                  value="${cant}"
+                  onchange="cambiarComensalesDia('${dia}', this.value)"
+                  class="w-8 text-center font-extrabold text-xs text-emerald-700 bg-white rounded-lg border border-stone-200 py-0.5 focus:outline-none"
+                />
+                <button type="button" onclick="cambiarComensalesDia('${dia}', ${cant + 1})" class="w-6 h-6 rounded-lg bg-white text-stone-700 font-bold text-xs shadow-2xs">+</button>
+              </div>
+            </div>
+            ${renderizarTurno(dia, 'almuerzo')}
+            ${renderizarTurno(dia, 'cena')}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function calcularConsolidado() {
+      const mapa = new Map();
+      let turnosSobras = 0;
+      clavesCompras = {};
+
+      DIAS.forEach(dia => {
+        ['almuerzo', 'cena'].forEach(turno => {
+          const data = estado.dias[dia][turno];
+          if (!data || !data.plato.trim()) return;
+          if (esTurnoSobras(data.plato)) {
+            turnosSobras++;
+            return;
+          }
+          (data.ingredientes || []).forEach(ing => {
+            const clave = `${ing.nombre.toLowerCase().trim()}__${ing.unidad}`;
+            clavesCompras[clave] = clave;
+            if (mapa.has(clave)) {
+              const prev = mapa.get(clave);
+              prev.cantidad = Math.round((prev.cantidad + Number(ing.cantidad)) * 10) / 10;
+            } else {
+              mapa.set(clave, {
+                clave,
+                nombre: ing.nombre.trim(),
+                cantidad: Number(ing.cantidad),
+                unidad: ing.unidad,
+                rubro: ing.rubro || 'Almacén y Panadería'
+              });
+            }
+          });
+        });
+      });
+
+      return { items: Array.from(mapa.values()), turnosSobras };
+    }
+
+    function generarTotalInsumos() {
+      const { items } = calcularConsolidado();
+      if (items.length === 0) {
+        mostrarToast('Cargá comidas en los días para armar el total de insumos');
+        return;
+      }
+      document.getElementById('panel-compras').classList.remove('hidden');
+      renderizarCompras();
+      document.getElementById('panel-compras').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cerrarPanelCompras() {
+      document.getElementById('panel-compras').classList.add('hidden');
+    }
+
+    function toggleCompradoPorId(idNum) {
+      const clave = clavesCompras[idNum];
+      if (!clave) return;
+      estado.comprados[clave] = !estado.comprados[clave];
+      guardarDatos();
+      renderizarCompras();
+    }
+
+    function renderizarCompras() {
+      const panel = document.getElementById('panel-compras');
+      if (panel.classList.contains('hidden')) return;
+
+      const { items, turnosSobras } = calcularConsolidado();
+      const aviso = document.getElementById('aviso-sobras');
+      if (turnosSobras > 0) {
+        aviso.classList.remove('hidden');
+        document.getElementById('texto-aviso-sobras').textContent =
+          `${turnosSobras} turno${turnosSobras > 1 ? 's' : ''} cubierto${turnosSobras > 1 ? 's' : ''} con sobras (no se sumaron insumos extra).`;
+      } else {
+        aviso.classList.add('hidden');
+      }
+
+      const listos = items.filter(i => estado.comprados[i.clave]).length;
+      document.getElementById('progreso-texto').textContent = `${listos} / ${items.length}`;
+      document.getElementById('progreso-barra').style.width = items.length ? `${(listos / items.length) * 100}%` : '0%';
+
+      const rubrosOrden = ['Verdulería', 'Carnicería y Pescadería', 'Lácteos y Fiambres', 'Almacén y Panadería'];
+      const iconos = {
+        'Verdulería': '🥬',
+        'Carnicería y Pescadería': '🥩',
+        'Lácteos y Fiambres': '🧀',
+        'Almacén y Panadería': '🥖'
+      };
+
+      const idPorClave = {};
+      items.forEach((it, idx) => {
+        const numId = `item_${idx}`;
+        idPorClave[it.clave] = numId;
+        clavesCompras[numId] = it.clave;
+      });
+
+      document.getElementById('contenedor-rubros').innerHTML = rubrosOrden.map(rubro => {
+        const itemsRubro = items.filter(i => i.rubro === rubro);
+        if (itemsRubro.length === 0) return '';
+        return `
+          <div class="bg-stone-50 rounded-2xl p-4 border border-stone-200/80">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-700 mb-3 flex items-center gap-1.5">
+              <span>${iconos[rubro] || '📦'}</span> ${rubro}
+            </h4>
+            <ul class="space-y-2">
+              ${itemsRubro.map(it => {
+                const ok = !!estado.comprados[it.clave];
+                const numId = idPorClave[it.clave];
+                return `
+                  <li onclick="toggleCompradoPorId('${numId}')" class="flex items-center justify-between gap-2 p-2 rounded-xl bg-white border border-stone-200/60 cursor-pointer hover:border-emerald-300 transition">
+                    <div class="flex items-center gap-2.5">
+                      <input type="checkbox" ${ok ? 'checked' : ''} class="w-4 h-4 accent-emerald-600 rounded pointer-events-none" />
+                      <span class="text-xs sm:text-sm ${ok ? 'line-through text-stone-400' : 'text-stone-800 font-medium'}">${escaparAtributo(it.nombre)}</span>
+                    </div>
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg shrink-0">${it.cantidad} ${it.unidad}</span>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderizarTodo() {
+      renderizarDias();
+      renderizarCompras();
+    }
+
+    function copiarMenuWhatsApp() {
+      let texto = `🌳 *Menú QuintaLosTilos*\n\n`;
+      DIAS.forEach(d => {
+        const p = estado.dias[d].comensales;
+        const a = estado.dias[d].almuerzo.plato || '-';
+        const c = estado.dias[d].cena.plato || '-';
+        texto += `*${d}* (${p} pers.)\n☀️ Almuerzo: ${a}\n🌙 Cena: ${c}\n\n`;
+      });
+      navigator.clipboard.writeText(texto.trim());
+      mostrarToast('Menú copiado para WhatsApp');
+    }
+
+    function copiarListaWhatsApp() {
+      const { items } = calcularConsolidado();
+      if (items.length === 0) return;
+      let texto = `🛒 *Total de Insumos — QuintaLosTilos*\n\n`;
+      const rubros = [...new Set(items.map(i => i.rubro))];
+      rubros.forEach(r => {
+        texto += `*${r}*\n`;
+        items.filter(i => i.rubro === r).forEach(i => {
+          texto += `${estado.comprados[i.clave] ? '✅' : '⬜'} ${i.nombre} (${i.cantidad} ${i.unidad})\n`;
+        });
+        texto += '\n';
+      });
+      navigator.clipboard.writeText(texto.trim());
+      mostrarToast('Lista copiada para WhatsApp');
+    }
+
+    function abrirModalSync() {
+      document.getElementById('input-firebase-url').value = obtenerFirebaseUrl();
+      document.getElementById('modal-sync').classList.remove('hidden');
+    }
+
+    function cerrarModalSync() {
+      document.getElementById('modal-sync').classList.add('hidden');
+    }
+
+    async function guardarFirebaseUrl() {
+      const val = document.getElementById('input-firebase-url').value.trim().replace(/\/+$/, '');
+      localStorage.setItem(FIREBASE_URL_KEY, val);
+      cerrarModalSync();
+      actualizarBadgeSync();
+      await guardarDatos();
+      await cargarDatos();
+      mostrarToast('Sincronización actualizada');
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>

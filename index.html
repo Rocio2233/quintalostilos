@@ -47,6 +47,9 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <button type="button" onclick="abrirModalApi()" title="Configurar clave de IA" class="p-2 rounded-xl bg-stone-100 hover:bg-stone-200/70 text-stone-600 border border-stone-200/80 transition">
+          🔑
+        </button>
         <button type="button" onclick="abrirModalSync()" title="Estado de sincronización" class="p-2 rounded-xl bg-stone-100 hover:bg-stone-200/70 text-stone-600 border border-stone-200/80 transition">
           ☁️
         </button>
@@ -58,13 +61,17 @@
 
     <!-- Barra de acciones principales -->
     <section class="flex flex-col sm:flex-row gap-2.5">
+      <button type="button" onclick="abrirModalIA()" class="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition active:scale-[0.99]">
+        <span>✨</span>
+        <span>Ideas con IA</span>
+      </button>
       <button type="button" onclick="generarTotalInsumos()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition active:scale-[0.99]">
         <span>🛒</span>
         <span>Total de Insumos</span>
       </button>
       <button type="button" onclick="copiarMenuWhatsApp()" class="sm:w-auto bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold py-3 px-4 rounded-2xl shadow-2xs flex items-center justify-center gap-2 transition">
         <span>📲</span>
-        <span>Copiar menú WhatsApp</span>
+        <span>Copiar menú</span>
       </button>
     </section>
 
@@ -157,6 +164,61 @@
     QuintaLosTilos · Organizador de comidas de verano
   </footer>
 
+  <!-- Modal Ideas con IA -->
+  <div id="modal-ia" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-stone-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-extrabold text-stone-900">✨ Sugerencias de comida con IA</h3>
+        <button type="button" onclick="cerrarModalIA()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-stone-500">Contale qué estilo de platos querés o qué tenés para aprovechar, y te arma opciones con sus ingredientes.</p>
+
+      <div>
+        <label class="block text-xs font-bold text-stone-700 mb-1">Preferencias o ingredientes disponibles</label>
+        <input id="input-ia-prefs" type="text" placeholder="Ej: comidas frescas de verano, algo de parrilla, tartas..." class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-500" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-stone-700 mb-1">¿Dónde cargar las sugerencias?</label>
+        <select id="select-ia-alcance" class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm bg-white focus:outline-none focus:border-emerald-500">
+          <option value="vacios">Solo en los turnos vacíos</option>
+          <option value="todo">Reemplazar toda la semana (Lunes a Domingo)</option>
+        </select>
+      </div>
+
+      <label class="flex items-center justify-between p-3 rounded-2xl bg-amber-50/70 border border-amber-200 cursor-pointer">
+        <div class="pr-2">
+          <span class="block text-xs font-extrabold text-amber-900">♻️ Incluir turnos de sobras</span>
+          <span class="block text-[11px] text-amber-700">Reutiliza comidas rendidoras al día siguiente</span>
+        </div>
+        <input id="check-ia-sobras" type="checkbox" checked class="w-5 h-5 accent-amber-600 rounded" />
+      </label>
+
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="cerrarModalIA()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-xs">Cancelar</button>
+        <button id="btn-ejecutar-ia" type="button" onclick="ejecutarIdeasIA()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm">Sugerir comidas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal API Key -->
+  <div id="modal-api" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-stone-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-extrabold text-stone-900">🔑 Clave de Gemini AI</h3>
+        <button type="button" onclick="cerrarModalApi()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-stone-600 leading-relaxed">
+        Pegá tu clave de Gemini / Google AI Studio para generar ideas de comidas y sus ingredientes automáticamente.
+      </p>
+      <input id="input-api-key" type="password" placeholder="AQ.... o AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm font-mono focus:outline-none focus:border-emerald-500" />
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="cerrarModalApi()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-xs">Cerrar</button>
+        <button type="button" onclick="guardarApiKey()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Guardar clave</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Agregar Ingrediente -->
   <div id="modal-ingrediente" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-xl border border-stone-100 space-y-3.5">
@@ -228,6 +290,7 @@
   <script>
     const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const STORAGE_KEY = 'quintalostilos_v4';
+    const API_STORAGE_KEY = 'quintalostilos_gemini_key';
     const FIREBASE_URL_KEY = 'quintalostilos_firebase_url';
     const FIREBASE_URL_FIJA = 'https://quinta-los-tilos-default-rtdb.firebaseio.com';
 
@@ -421,7 +484,7 @@
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.classList.remove('opacity-0');
-      setTimeout(() => t.classList.add('opacity-0'), 3000);
+      setTimeout(() => t.classList.add('opacity-0'), 3200);
     }
 
     function esTurnoSobras(texto) {
@@ -540,6 +603,163 @@
       guardarDatos();
       renderizarTodo();
       mostrarToast('Semana limpiada');
+    }
+
+    function obtenerApiKey() {
+      return (localStorage.getItem(API_STORAGE_KEY) || '').trim();
+    }
+
+    function abrirModalApi() {
+      document.getElementById('input-api-key').value = obtenerApiKey();
+      document.getElementById('modal-api').classList.remove('hidden');
+    }
+
+    function cerrarModalApi() {
+      document.getElementById('modal-api').classList.add('hidden');
+    }
+
+    function guardarApiKey() {
+      const val = document.getElementById('input-api-key').value.trim();
+      localStorage.setItem(API_STORAGE_KEY, val);
+      cerrarModalApi();
+      mostrarToast(val ? 'Clave guardada' : 'Clave eliminada');
+    }
+
+    function abrirModalIA() {
+      document.getElementById('modal-ia').classList.remove('hidden');
+    }
+
+    function cerrarModalIA() {
+      document.getElementById('modal-ia').classList.add('hidden');
+    }
+
+    async function llamarGemini(promptTexto) {
+      const apiKey = obtenerApiKey();
+      if (!apiKey) {
+        cerrarModalIA();
+        abrirModalApi();
+        throw new Error('Cargá tu clave de IA en el ícono de la llave');
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: promptTexto }] }],
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error?.message || `Error ${res.status} al conectar con la IA`);
+        }
+
+        const data = await res.json();
+        let texto = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        texto = texto.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+        return JSON.parse(texto);
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          throw new Error('La IA tardó demasiado en responder. Probá de nuevo.');
+        }
+        throw e;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    async function ejecutarIdeasIA() {
+      const prefs = document.getElementById('input-ia-prefs').value.trim() || 'comidas frescas de verano argentino, variadas y prácticas';
+      const alcance = document.getElementById('select-ia-alcance').value;
+      const incluirSobras = document.getElementById('check-ia-sobras').checked;
+      const btn = document.getElementById('btn-ejecutar-ia');
+
+      btn.disabled = true;
+      btn.textContent = 'Pensando ideas...';
+
+      const detalleDias = DIAS.map(d => `${d}: ${estado.dias[d].comensales || 6} personas`).join(', ');
+      const reglaSobras = incluirSobras
+        ? 'Incluí entre 3 y 4 turnos de "Comer las sobras" después de platos rendidores.'
+        : 'No pongas turnos de sobras; sugerí platos distintos.';
+
+      const prompt = `
+        Sugerí opciones de comidas de verano en Argentina para una quinta.
+        Cantidad de personas por día: ${detalleDias}.
+        Preferencias: ${prefs}.
+        ${reglaSobras}
+        Para cada plato (que no sea sobras), incluí también sus ingredientes escalados a las personas de ese día.
+        Devolvé ÚNICAMENTE un JSON válido con esta estructura:
+        {
+          "Lunes": {
+            "almuerzo": {
+              "plato": "Nombre del plato",
+              "ingredientes": [
+                { "nombre": "Ingrediente", "cantidad": 1, "unidad": "kg", "rubro": "Verdulería" }
+              ]
+            },
+            "cena": {
+              "plato": "Nombre del plato",
+              "ingredientes": []
+            }
+          }
+        }
+        Usá los 7 días: Lunes, Martes, Miércoles, Jueves, Viernes, Sábado, Domingo.
+        Unidades permitidas: "unid", "kg", "g", "paq", "atados", "L".
+        Rubros permitidos: "Verdulería", "Carnicería y Pescadería", "Lácteos y Fiambres", "Almacén y Panadería".
+      `;
+
+      try {
+        const res = await llamarGemini(prompt);
+        let aplicados = 0;
+
+        DIAS.forEach(dia => {
+          if (!res[dia]) return;
+          ['almuerzo', 'cena'].forEach(turno => {
+            const actual = (estado.dias[dia][turno].plato || '').trim();
+            if (alcance === 'vacios' && actual) return;
+            const sugerido = res[dia][turno];
+            if (!sugerido || !sugerido.plato) return;
+
+            const platoTexto = String(sugerido.plato).trim();
+            let ings = [];
+            if (!esTurnoSobras(platoTexto)) {
+              if (Array.isArray(sugerido.ingredientes) && sugerido.ingredientes.length > 0) {
+                ings = sugerido.ingredientes.map(i => ({
+                  nombre: String(i.nombre || '').trim(),
+                  cantidad: Number(i.cantidad) || 1,
+                  unidad: ['unid', 'kg', 'g', 'paq', 'atados', 'L'].includes(i.unidad) ? i.unidad : 'unid',
+                  rubro: ['Verdulería', 'Carnicería y Pescadería', 'Lácteos y Fiambres', 'Almacén y Panadería'].includes(i.rubro) ? i.rubro : 'Almacén y Panadería'
+                })).filter(i => i.nombre);
+              } else {
+                ings = detectarIngredientes(platoTexto, estado.dias[dia].comensales);
+              }
+            }
+
+            estado.dias[dia][turno] = { plato: platoTexto, ingredientes: ings };
+            aplicados++;
+          });
+        });
+
+        await guardarDatos();
+        renderizarTodo();
+        cerrarModalIA();
+        mostrarToast(aplicados > 0 ? `✨ Se cargaron ${aplicados} opciones de comida` : 'No había turnos vacíos para completar');
+      } catch (e) {
+        mostrarToast(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sugerir comidas';
+      }
     }
 
     function escaparAtributo(txt) {

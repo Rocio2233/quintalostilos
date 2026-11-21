@@ -394,11 +394,7 @@
         throw new Error('Falta configurar la clave de Gemini AI');
       }
 
-      const esVertexExpress = apiKey.startsWith('AQ.');
-      const url = esVertexExpress
-        ? `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`
-        : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
       const res = await fetch(url, {
         method: 'POST',
         headers: {

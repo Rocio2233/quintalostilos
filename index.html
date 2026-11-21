@@ -153,7 +153,7 @@
     <section>
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-base font-extrabold text-stone-800">Planificación Semanal</h2>
-        <span class="text-xs text-stone-500">Escribí la comida y tocá Guardar para compartir</span>
+        <span class="text-xs text-stone-500">Escribí la comida y tocá Guardar</span>
       </div>
       <div id="grid-dias" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
     </section>
@@ -169,3 +169,865 @@
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-stone-100 space-y-4">
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-extrabold text-stone-900">✨ Sugerencias de comida con IA</h3>
+        <button type="button" onclick="cerrarModalIA()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-stone-500">Contale qué estilo de platos querés y te arma opciones para la semana.</p>
+
+      <div>
+        <label class="block text-xs font-bold text-stone-700 mb-1">Preferencias</label>
+        <input id="input-ia-prefs" type="text" placeholder="Ej: comidas frescas de verano, parrilla, tartas..." class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-500" />
+      </div>
+
+      <label class="flex items-center justify-between p-3 rounded-2xl bg-amber-50/70 border border-amber-200 cursor-pointer">
+        <div class="pr-2">
+          <span class="block text-xs font-extrabold text-amber-900">♻️ Incluir turnos de sobras</span>
+          <span class="block text-[11px] text-amber-700">Reutiliza comidas rendidoras al día siguiente</span>
+        </div>
+        <input id="check-ia-sobras" type="checkbox" checked class="w-5 h-5 accent-amber-600 rounded" />
+      </label>
+
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="cerrarModalIA()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-xs">Cancelar</button>
+        <button id="btn-ejecutar-ia" type="button" onclick="ejecutarIdeasIA()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm">Sugerir comidas</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal API Key -->
+  <div id="modal-api" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-stone-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-extrabold text-stone-900">🔑 Clave de Gemini AI</h3>
+        <button type="button" onclick="cerrarModalApi()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
+      </div>
+      <input id="input-api-key" type="password" placeholder="AQ.... o AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm font-mono focus:outline-none focus:border-emerald-500" />
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="cerrarModalApi()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-xs">Cerrar</button>
+        <button type="button" onclick="guardarApiKey()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Guardar clave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Agregar Ingrediente -->
+  <div id="modal-ingrediente" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 shadow-xl border border-stone-100 space-y-3.5">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-extrabold text-stone-900">+ Agregar ingrediente</h3>
+        <button type="button" onclick="cerrarModalIngrediente()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
+      </div>
+      <p id="subtitulo-modal-ing" class="text-xs text-stone-500"></p>
+      <div class="space-y-2.5">
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Producto</label>
+          <input id="ing-nombre" type="text" placeholder="Ej: Acelga, Huevos, Queso..." class="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Cantidad</label>
+            <input id="ing-cantidad" type="number" step="0.1" min="0.1" value="1" class="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-stone-700 mb-1">Unidad</label>
+            <select id="ing-unidad" class="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white focus:outline-none focus:border-emerald-500">
+              <option value="unid">unidades</option>
+              <option value="kg">kg</option>
+              <option value="g">gramos (g)</option>
+              <option value="paq">paquetes</option>
+              <option value="atados">atados</option>
+              <option value="L">litros (L)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Rubro</label>
+          <select id="ing-rubro" class="w-full px-3 py-2 rounded-xl border border-stone-300 text-sm bg-white focus:outline-none focus:border-emerald-500">
+            <option value="Verdulería">🥬 Verdulería</option>
+            <option value="Carnicería y Pescadería">🥩 Carnicería y Pescadería</option>
+            <option value="Lácteos y Fiambres">🧀 Lácteos y Fiambres</option>
+            <option value="Almacén y Panadería">🥖 Almacén y Panadería</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button type="button" onclick="cerrarModalIngrediente()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-xs">Cancelar</button>
+        <button type="button" onclick="confirmarAgregarIngrediente()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Sync -->
+  <div id="modal-sync" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-stone-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-extrabold text-stone-900">☁️ Sincronización en vivo</h3>
+        <button type="button" onclick="cerrarModalSync()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
+      </div>
+      <input id="input-firebase-url" type="url" class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-xs font-mono focus:outline-none focus:border-emerald-500" />
+      <div class="flex gap-2 pt-1">
+        <button type="button" onclick="cerrarModalSync()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-xs">Cerrar</button>
+        <button type="button" onclick="guardarFirebaseUrl()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Guardar y sincronizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+  <script>
+    const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const STORAGE_KEY = 'quintalostilos_v4';
+    const API_STORAGE_KEY = 'quintalostilos_gemini_key';
+    const FIREBASE_URL_KEY = 'quintalostilos_firebase_url';
+    const FIREBASE_URL_FIJA = 'https://quinta-los-tilos-default-rtdb.firebaseio.com';
+
+    const RECETARIO_BASE = [
+      {
+        claves: ['tarta de verdura', 'tarta de acelga', 'tarta de espinaca'],
+        items: [
+          { nombre: 'Tapas de tarta', cant4: 1, unidad: 'paq', rubro: 'Almacén y Panadería' },
+          { nombre: 'Acelga / Espinaca', cant4: 2, unidad: 'atados', rubro: 'Verdulería' },
+          { nombre: 'Cebolla', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Huevos', cant4: 4, unidad: 'unid', rubro: 'Almacén y Panadería' },
+          { nombre: 'Queso cremoso', cant4: 250, unidad: 'g', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Queso rallado', cant4: 50, unidad: 'g', rubro: 'Lácteos y Fiambres' }
+        ]
+      },
+      {
+        claves: ['tarta caprese', 'tarta de tomate y queso'],
+        items: [
+          { nombre: 'Tapas de tarta', cant4: 1, unidad: 'paq', rubro: 'Almacén y Panadería' },
+          { nombre: 'Tomate perita', cant4: 0.7, unidad: 'kg', rubro: 'Verdulería' },
+          { nombre: 'Albahaca fresca', cant4: 1, unidad: 'atados', rubro: 'Verdulería' },
+          { nombre: 'Queso cremoso', cant4: 400, unidad: 'g', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Huevos', cant4: 2, unidad: 'unid', rubro: 'Almacén y Panadería' }
+        ]
+      },
+      {
+        claves: ['asado', 'parrilla'],
+        items: [
+          { nombre: 'Carne para asado', cant4: 1.6, unidad: 'kg', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Chorizos', cant4: 4, unidad: 'unid', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Morcilla', cant4: 2, unidad: 'unid', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Provoleta', cant4: 1, unidad: 'unid', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Lechuga', cant4: 1, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Tomate', cant4: 0.6, unidad: 'kg', rubro: 'Verdulería' },
+          { nombre: 'Pan', cant4: 0.5, unidad: 'kg', rubro: 'Almacén y Panadería' },
+          { nombre: 'Carbón', cant4: 1, unidad: 'paq', rubro: 'Almacén y Panadería' }
+        ]
+      },
+      {
+        claves: ['ensalada cesar', 'ensalada césar'],
+        items: [
+          { nombre: 'Pechuga de pollo', cant4: 0.8, unidad: 'kg', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Lechuga', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Queso parmesano', cant4: 120, unidad: 'g', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Pan lactal', cant4: 0.5, unidad: 'paq', rubro: 'Almacén y Panadería' },
+          { nombre: 'Aderezo César', cant4: 1, unidad: 'unid', rubro: 'Almacén y Panadería' }
+        ]
+      },
+      {
+        claves: ['tortilla de papa', 'tortilla de papas'],
+        items: [
+          { nombre: 'Papa', cant4: 1.2, unidad: 'kg', rubro: 'Verdulería' },
+          { nombre: 'Huevos', cant4: 6, unidad: 'unid', rubro: 'Almacén y Panadería' },
+          { nombre: 'Cebolla', cant4: 1, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Tomate', cant4: 0.5, unidad: 'kg', rubro: 'Verdulería' }
+        ]
+      },
+      {
+        claves: ['pastel de papa', 'pastel de papas'],
+        items: [
+          { nombre: 'Carne picada', cant4: 0.8, unidad: 'kg', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Papa', cant4: 1.5, unidad: 'kg', rubro: 'Verdulería' },
+          { nombre: 'Cebolla', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Morrón', cant4: 1, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Manteca', cant4: 50, unidad: 'g', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Leche', cant4: 0.3, unidad: 'L', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Queso cremoso', cant4: 200, unidad: 'g', rubro: 'Lácteos y Fiambres' }
+        ]
+      },
+      {
+        claves: ['milanesa', 'milanesas'],
+        items: [
+          { nombre: 'Milanesas', cant4: 1, unidad: 'kg', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Papa', cant4: 1.2, unidad: 'kg', rubro: 'Verdulería' },
+          { nombre: 'Manteca', cant4: 50, unidad: 'g', rubro: 'Lácteos y Fiambres' },
+          { nombre: 'Leche', cant4: 0.25, unidad: 'L', rubro: 'Lácteos y Fiambres' }
+        ]
+      },
+      {
+        claves: ['fajita', 'fajitas'],
+        items: [
+          { nombre: 'Rapiditas', cant4: 2, unidad: 'paq', rubro: 'Almacén y Panadería' },
+          { nombre: 'Carne o pollo en tiras', cant4: 0.9, unidad: 'kg', rubro: 'Carnicería y Pescadería' },
+          { nombre: 'Morrón', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Cebolla', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Palta', cant4: 2, unidad: 'unid', rubro: 'Verdulería' },
+          { nombre: 'Queso cheddar o cremoso', cant4: 200, unidad: 'g', rubro: 'Lácteos y Fiambres' }
+        ]
+      }
+    ];
+
+    function crearEstadoInicial() {
+      const dias = {};
+      DIAS.forEach(d => {
+        dias[d] = {
+          comensales: 6,
+          almuerzo: { plato: '', ingredientes: [] },
+          cena: { plato: '', ingredientes: [] }
+        };
+      });
+      return { dias, comprados: {}, updatedAt: Date.now() };
+    }
+
+    let estado = crearEstadoInicial();
+    let clavesCompras = {};
+    let contextoIng = null;
+    let pollTimer = null;
+
+    function obtenerFirebaseUrl() {
+      const guardada = (localStorage.getItem(FIREBASE_URL_KEY) || '').trim();
+      const raw = guardada || FIREBASE_URL_FIJA;
+      return raw.replace(/\/+$/, '');
+    }
+
+    function actualizarBadgeSync() {
+      const badge = document.getElementById('badge-sync');
+      if (obtenerFirebaseUrl()) {
+        badge.textContent = '🟢 Compartido en vivo';
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+      } else {
+        badge.textContent = 'Local';
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+      }
+    }
+
+    function normalizarEstado(raw) {
+      const base = crearEstadoInicial();
+      if (!raw || !raw.dias) return base;
+      DIAS.forEach(d => {
+        if (raw.dias[d]) {
+          base.dias[d].comensales = Number(raw.dias[d].comensales) || 6;
+          ['almuerzo', 'cena'].forEach(t => {
+            if (raw.dias[d][t]) {
+              base.dias[d][t].plato = raw.dias[d][t].plato || '';
+              base.dias[d][t].ingredientes = Array.isArray(raw.dias[d][t].ingredientes) ? raw.dias[d][t].ingredientes : [];
+            }
+          });
+        }
+      });
+      base.comprados = raw.comprados || {};
+      base.updatedAt = raw.updatedAt || Date.now();
+      return base;
+    }
+
+    async function cargarDatos() {
+      const local = localStorage.getItem(STORAGE_KEY);
+      if (local) {
+        try { estado = normalizarEstado(JSON.parse(local)); } catch (e) {}
+      }
+      actualizarBadgeSync();
+      renderizarTodo();
+
+      if (obtenerFirebaseUrl()) {
+        await traerDeNube();
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(traerDeNube, 4000);
+      }
+    }
+
+    async function traerDeNube() {
+      const url = obtenerFirebaseUrl();
+      if (!url) return;
+      try {
+        const res = await fetch(`${url}/quintalostilos.json`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.updatedAt && data.updatedAt > (estado.updatedAt || 0)) {
+          estado = normalizarEstado(data);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
+          renderizarTodo();
+        }
+      } catch (e) {}
+    }
+
+    async function guardarDatos() {
+      estado.updatedAt = Date.now();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
+      const url = obtenerFirebaseUrl();
+      if (url) {
+        try {
+          await fetch(`${url}/quintalostilos.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(estado)
+          });
+        } catch (e) {}
+      }
+    }
+
+    function mostrarToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('opacity-0');
+      setTimeout(() => t.classList.add('opacity-0'), 3000);
+    }
+
+    function esTurnoSobras(texto) {
+      return !!texto && /sobra|recalentado|lo que qued/i.test(texto);
+    }
+
+    function redondearCantidad(valor, unidad) {
+      if (unidad === 'unid' || unidad === 'paq' || unidad === 'atados') return Math.max(1, Math.ceil(valor));
+      if (unidad === 'g') return Math.max(50, Math.round(valor / 50) * 50);
+      return Math.max(0.1, Math.round(valor * 10) / 10);
+    }
+
+    function detectarIngredientes(plato, comensales) {
+      if (!plato || esTurnoSobras(plato)) return [];
+      const limpio = plato.toLowerCase().trim();
+      const receta = RECETARIO_BASE.find(r => r.claves.some(c => limpio.includes(c)));
+      if (!receta) return [];
+      const factor = comensales / 4;
+      return receta.items.map(it => ({
+        nombre: it.nombre,
+        cantidad: redondearCantidad(it.cant4 * factor, it.unidad),
+        unidad: it.unidad,
+        rubro: it.rubro
+      }));
+    }
+
+    function cambiarComensalesDia(dia, valor) {
+      const anterior = estado.dias[dia].comensales || 6;
+      const actual = Math.max(1, Math.min(40, parseInt(valor, 10) || 1));
+      if (anterior === actual) return;
+      const factor = actual / anterior;
+      estado.dias[dia].comensales = actual;
+      ['almuerzo', 'cena'].forEach(turno => {
+        (estado.dias[dia][turno].ingredientes || []).forEach(ing => {
+          ing.cantidad = redondearCantidad(ing.cantidad * factor, ing.unidad);
+        });
+      });
+      guardarDatos();
+      renderizarTodo();
+    }
+
+    function actualizarPlato(dia, turno, valor) {
+      const platoTrim = valor.trim();
+      estado.dias[dia][turno].plato = platoTrim;
+      if (!platoTrim || esTurnoSobras(platoTrim)) {
+        estado.dias[dia][turno].ingredientes = [];
+      } else {
+        const detectados = detectarIngredientes(platoTrim, estado.dias[dia].comensales);
+        if (detectados.length > 0) {
+          estado.dias[dia][turno].ingredientes = detectados;
+        }
+      }
+      guardarDatos();
+      renderizarTodo();
+    }
+
+    // Nuevo botón Guardar por turno para sincronizar explícitamente en vivo
+    async function guardarTurno(dia, turno, inputEl) {
+      const valor = inputEl ? inputEl.value.trim() : (estado.dias[dia][turno].plato || '').trim();
+      estado.dias[dia][turno].plato = valor;
+      if (!valor || esTurnoSobras(valor)) {
+        estado.dias[dia][turno].ingredientes = [];
+      } else {
+        const detectados = detectarIngredientes(valor, estado.dias[dia].comensales);
+        if (detectados.length > 0) {
+          estado.dias[dia][turno].ingredientes = detectados;
+        }
+      }
+      await guardarDatos();
+      renderizarTodo();
+      mostrarToast(`💾 Guardado (${dia} - ${turno})`);
+    }
+
+    function ponerSobrasEnTurno(dia, turno) {
+      estado.dias[dia][turno] = { plato: 'Comer las sobras', ingredientes: [] };
+      guardarDatos();
+      renderizarTodo();
+      mostrarToast('Sobras asignadas al turno');
+    }
+
+    function eliminarIngrediente(dia, turno, idx) {
+      estado.dias[dia][turno].ingredientes.splice(idx, 1);
+      guardarDatos();
+      renderizarTodo();
+    }
+
+    function abrirModalIngrediente(dia, turno) {
+      contextoIng = { dia, turno };
+      document.getElementById('subtitulo-modal-ing').textContent = `${dia} (${turno}) — ${estado.dias[dia][turno].plato || turno}`;
+      document.getElementById('ing-nombre').value = '';
+      document.getElementById('ing-cantidad').value = '1';
+      document.getElementById('modal-ingrediente').classList.remove('hidden');
+      setTimeout(() => document.getElementById('ing-nombre').focus(), 50);
+    }
+
+    function cerrarModalIngrediente() {
+      document.getElementById('modal-ingrediente').classList.add('hidden');
+      contextoIng = null;
+    }
+
+    function confirmarAgregarIngrediente() {
+      if (!contextoIng) return;
+      const nombre = document.getElementById('ing-nombre').value.trim();
+      const cantidad = parseFloat(document.getElementById('ing-cantidad').value) || 1;
+      const unidad = document.getElementById('ing-unidad').value;
+      const rubro = document.getElementById('ing-rubro').value;
+      if (!nombre) return mostrarToast('Escribí el nombre del producto');
+
+      const { dia, turno } = contextoIng;
+      if (!estado.dias[dia][turno].plato) estado.dias[dia][turno].plato = 'Comida casera';
+      estado.dias[dia][turno].ingredientes.push({ nombre, cantidad, unidad, rubro });
+      guardarDatos();
+      cerrarModalIngrediente();
+      renderizarTodo();
+    }
+
+    function asignarRapido(plato) {
+      for (const dia of DIAS) {
+        for (const turno of ['almuerzo', 'cena']) {
+          if (!estado.dias[dia][turno].plato.trim()) {
+            actualizarPlato(dia, turno, plato);
+            mostrarToast(`Agregado al ${turno} del ${dia}`);
+            return;
+          }
+        }
+      }
+      mostrarToast('Todos los turnos ya están ocupados');
+    }
+
+    function limpiarSemana() {
+      estado = crearEstadoInicial();
+      document.getElementById('panel-compras').classList.add('hidden');
+      guardarDatos();
+      renderizarTodo();
+      mostrarToast('Semana limpiada');
+    }
+
+    function obtenerApiKey() {
+      return (localStorage.getItem(API_STORAGE_KEY) || '').trim();
+    }
+
+    function abrirModalApi() {
+      document.getElementById('input-api-key').value = obtenerApiKey();
+      document.getElementById('modal-api').classList.remove('hidden');
+    }
+
+    function cerrarModalApi() {
+      document.getElementById('modal-api').classList.add('hidden');
+    }
+
+    function guardarApiKey() {
+      const val = document.getElementById('input-api-key').value.trim();
+      localStorage.setItem(API_STORAGE_KEY, val);
+      cerrarModalApi();
+      mostrarToast(val ? 'Clave guardada' : 'Clave eliminada');
+    }
+
+    function abrirModalIA() {
+      document.getElementById('modal-ia').classList.remove('hidden');
+    }
+
+    function cerrarModalIA() {
+      document.getElementById('modal-ia').classList.add('hidden');
+    }
+
+    async function llamarGemini(promptTexto) {
+      const apiKey = obtenerApiKey();
+      if (!apiKey) {
+        cerrarModalIA();
+        abrirModalApi();
+        throw new Error('Cargá tu clave de IA en el ícono de la llave');
+      }
+
+      const modelos = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'];
+      let ultimoError = null;
+
+      for (const modelo of modelos) {
+        for (let intento = 0; intento < 2; intento++) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000);
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
+
+          try {
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey
+              },
+              signal: controller.signal,
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: promptTexto }] }],
+                generationConfig: { responseMimeType: 'application/json' }
+              })
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              let texto = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+              texto = texto.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+              return JSON.parse(texto);
+            }
+
+            const err = await res.json().catch(() => ({}));
+            const msg = err?.error?.message || `Error ${res.status}`;
+            ultimoError = new Error(msg);
+
+            if (res.status === 429 || res.status === 503 || /high demand|overloaded|unavailable/i.test(msg)) {
+              await new Promise(r => setTimeout(r, 1000));
+              continue;
+            }
+            if (res.status === 404 || /not found|not available/i.test(msg)) {
+              break;
+            }
+            throw ultimoError;
+          } catch (e) {
+            if (e.name === 'AbortError') {
+              ultimoError = new Error('La IA tardó demasiado en responder.');
+              continue;
+            }
+            if (ultimoError && e === ultimoError && !/high demand|overloaded|unavailable/i.test(e.message)) {
+              throw e;
+            }
+            ultimoError = e;
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        }
+      }
+
+      throw ultimoError || new Error('La IA tiene alta demanda en este momento. Probá de nuevo en un ratito.');
+    }
+
+    async function ejecutarIdeasIA() {
+      const prefs = document.getElementById('input-ia-prefs').value.trim() || 'comidas frescas de verano argentino, variadas y prácticas';
+      const incluirSobras = document.getElementById('check-ia-sobras').checked;
+      const btn = document.getElementById('btn-ejecutar-ia');
+
+      btn.disabled = true;
+      btn.textContent = 'Pensando...';
+
+      const reglaSobras = incluirSobras
+        ? 'Incluí entre 3 y 4 turnos de "Comer las sobras" después de platos rendidores.'
+        : 'No pongas turnos de sobras.';
+
+      const prompt = `
+        Sugerí opciones de comidas de verano en Argentina para una quinta.
+        Preferencias: ${prefs}.
+        ${reglaSobras}
+        Devolvé ÚNICAMENTE un JSON válido con esta estructura:
+        {
+          "Lunes": { "almuerzo": "...", "cena": "..." },
+          "Martes": { "almuerzo": "...", "cena": "..." },
+          "Miércoles": { "almuerzo": "...", "cena": "..." },
+          "Jueves": { "almuerzo": "...", "cena": "..." },
+          "Viernes": { "almuerzo": "...", "cena": "..." },
+          "Sábado": { "almuerzo": "...", "cena": "..." },
+          "Domingo": { "almuerzo": "...", "cena": "..." }
+        }
+      `;
+
+      try {
+        const res = await llamarGemini(prompt);
+        DIAS.forEach(dia => {
+          if (!res[dia]) return;
+          ['almuerzo', 'cena'].forEach(turno => {
+            const plato = String(res[dia][turno] || '').trim();
+            if (!plato) return;
+            estado.dias[dia][turno].plato = plato;
+            estado.dias[dia][turno].ingredientes = detectarIngredientes(plato, estado.dias[dia].comensales);
+          });
+        });
+        await guardarDatos();
+        renderizarTodo();
+        cerrarModalIA();
+        mostrarToast('✨ ¡Opciones cargadas!');
+      } catch (e) {
+        mostrarToast(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sugerir comidas';
+      }
+    }
+
+    function escaparAtributo(txt) {
+      return String(txt || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function renderizarTurno(dia, turno) {
+      const esAlm = turno === 'almuerzo';
+      const data = estado.dias[dia][turno];
+      const plato = data.plato || '';
+      const ings = data.ingredientes || [];
+      const sobras = esTurnoSobras(plato);
+      const inputId = `turno-${dia}-${turno}`;
+
+      return `
+        <div class="space-y-1.5 rounded-2xl p-2.5 ${sobras ? 'bg-amber-50/70 border border-amber-300' : 'bg-stone-50/70 border border-stone-200/70'}">
+          <div class="flex items-center justify-between gap-2">
+            <label for="${inputId}" class="text-[11px] font-bold uppercase tracking-wider ${esAlm ? 'text-amber-600' : 'text-indigo-600'}">
+              ${esAlm ? '☀️ Almuerzo' : '🌙 Cena'}
+            </label>
+            <div class="flex items-center gap-1">
+              ${!sobras && !plato ? `
+                <button type="button" onclick="ponerSobrasEnTurno('${dia}', '${turno}')" class="text-[10px] font-bold text-amber-700 hover:bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-200 transition">
+                  ♻️ + Sobras
+                </button>
+              ` : ''}
+              ${!sobras ? `
+                <button type="button" onclick="abrirModalIngrediente('${dia}', '${turno}')" class="text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 px-1.5 py-0.5 rounded-md border border-emerald-200 transition">
+                  + Ingrediente
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <input
+              id="${inputId}"
+              type="text"
+              value="${escaparAtributo(plato)}"
+              placeholder="${esAlm ? 'Ej: Tarta de verdura...' : 'Ej: Asado o tarta...'}"
+              class="flex-1 min-w-0 text-xs sm:text-sm px-3 py-2 rounded-xl border ${sobras ? 'bg-white border-amber-300 text-amber-950 font-semibold' : 'bg-white border-stone-200 text-stone-800'} focus:outline-none focus:border-emerald-500 transition"
+            />
+            <button
+              type="button"
+              onclick="guardarTurno('${dia}', '${turno}', document.getElementById('${inputId}'))"
+              class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-2.5 py-2 rounded-xl transition"
+            >
+              💾 Guardar
+            </button>
+          </div>
+
+          ${sobras ? `
+            <span class="inline-block text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">♻️ Sobras / Sin compras</span>
+          ` : (ings.length > 0 ? `
+            <div class="pt-1 flex flex-wrap gap-1">
+              ${ings.map((ing, idx) => `
+                <span class="inline-flex items-center gap-1 text-[10px] bg-white border border-stone-200 text-stone-700 px-2 py-0.5 rounded-lg">
+                  <span>${escaparAtributo(ing.nombre)}</span>
+                  <strong class="text-emerald-700">${ing.cantidad} ${ing.unidad}</strong>
+                  <button type="button" onclick="eliminarIngrediente('${dia}', '${turno}', ${idx})" class="text-stone-400 hover:text-rose-500 font-bold">&times;</button>
+                </span>
+              `).join('')}
+            </div>
+          ` : '')}
+        </div>
+      `;
+    }
+
+    function renderizarDias() {
+      const contenedor = document.getElementById('grid-dias');
+      if (!contenedor) return;
+      contenedor.innerHTML = DIAS.map(dia => {
+        const cant = estado.dias[dia].comensales || 6;
+        const alm = estado.dias[dia].almuerzo.plato || '';
+        const cen = estado.dias[dia].cena.plato || '';
+        return `
+          <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-2xs flex flex-col gap-3">
+            <div class="flex items-center justify-between border-b border-stone-100 pb-2 gap-2">
+              <div class="flex items-center gap-2">
+                <h3 class="font-extrabold text-stone-800 text-sm">${dia}</h3>
+                <span class="text-[11px] font-semibold text-stone-400">${(alm ? 1 : 0) + (cen ? 1 : 0)}/2</span>
+              </div>
+              <div class="flex items-center gap-1 bg-stone-100 border border-stone-200/80 rounded-xl px-1.5 py-0.5">
+                <span class="text-[11px] font-bold text-stone-500">👥</span>
+                <button type="button" onclick="cambiarComensalesDia('${dia}', ${cant - 1})" class="w-6 h-6 rounded-lg bg-white text-stone-700 font-bold text-xs shadow-2xs">-</button>
+                <input
+                  type="number"
+                  min="1"
+                  max="40"
+                  value="${cant}"
+                  onchange="cambiarComensalesDia('${dia}', this.value)"
+                  class="w-8 text-center font-extrabold text-xs text-emerald-700 bg-white rounded-lg border border-stone-200 py-0.5 focus:outline-none"
+                />
+                <button type="button" onclick="cambiarComensalesDia('${dia}', ${cant + 1})" class="w-6 h-6 rounded-lg bg-white text-stone-700 font-bold text-xs shadow-2xs">+</button>
+              </div>
+            </div>
+            ${renderizarTurno(dia, 'almuerzo')}
+            ${renderizarTurno(dia, 'cena')}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function calcularConsolidado() {
+      const mapa = new Map();
+      let turnosSobras = 0;
+      clavesCompras = {};
+
+      DIAS.forEach(dia => {
+        ['almuerzo', 'cena'].forEach(turno => {
+          const data = estado.dias[dia][turno];
+          if (!data || !data.plato.trim()) return;
+          if (esTurnoSobras(data.plato)) {
+            turnosSobras++;
+            return;
+          }
+          (data.ingredientes || []).forEach(ing => {
+            const clave = `${ing.nombre.toLowerCase().trim()}__${ing.unidad}`;
+            clavesCompras[clave] = clave;
+            if (mapa.has(clave)) {
+              const prev = mapa.get(clave);
+              prev.cantidad = Math.round((prev.cantidad + Number(ing.cantidad)) * 10) / 10;
+            } else {
+              mapa.set(clave, {
+                clave,
+                nombre: ing.nombre.trim(),
+                cantidad: Number(ing.cantidad),
+                unidad: ing.unidad,
+                rubro: ing.rubro || 'Almacén y Panadería'
+              });
+            }
+          });
+        });
+      });
+
+      return { items: Array.from(mapa.values()), turnosSobras };
+    }
+
+    function generarTotalInsumos() {
+      const { items } = calcularConsolidado();
+      if (items.length === 0) {
+        mostrarToast('Cargá comidas en los días para armar el total de insumos');
+        return;
+      }
+      document.getElementById('panel-compras').classList.remove('hidden');
+      renderizarCompras();
+      document.getElementById('panel-compras').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cerrarPanelCompras() {
+      document.getElementById('panel-compras').classList.add('hidden');
+    }
+
+    function toggleCompradoPorId(idNum) {
+      const clave = clavesCompras[idNum];
+      if (!clave) return;
+      estado.comprados[clave] = !estado.comprados[clave];
+      guardarDatos();
+      renderizarCompras();
+    }
+
+    function renderizarCompras() {
+      const panel = document.getElementById('panel-compras');
+      if (panel.classList.contains('hidden')) return;
+
+      const { items, turnosSobras } = calcularConsolidado();
+      const aviso = document.getElementById('aviso-sobras');
+      if (turnosSobras > 0) {
+        aviso.classList.remove('hidden');
+        document.getElementById('texto-aviso-sobras').textContent =
+          `${turnosSobras} turno${turnosSobras > 1 ? 's' : ''} cubierto${turnosSobras > 1 ? 's' : ''} con sobras (no se sumaron insumos extra).`;
+      } else {
+        aviso.classList.add('hidden');
+      }
+
+      const listos = items.filter(i => estado.comprados[i.clave]).length;
+      document.getElementById('progreso-texto').textContent = `${listos} / ${items.length}`;
+      document.getElementById('progreso-barra').style.width = items.length ? `${(listos / items.length) * 100}%` : '0%';
+
+      const rubrosOrden = ['Verdulería', 'Carnicería y Pescadería', 'Lácteos y Fiambres', 'Almacén y Panadería'];
+      const iconos = {
+        'Verdulería': '🥬',
+        'Carnicería y Pescadería': '🥩',
+        'Lácteos y Fiambres': '🧀',
+        'Almacén y Panadería': '🥖'
+      };
+
+      const idPorClave = {};
+      items.forEach((it, idx) => {
+        const numId = `item_${idx}`;
+        idPorClave[it.clave] = numId;
+        clavesCompras[numId] = it.clave;
+      });
+
+      document.getElementById('contenedor-rubros').innerHTML = rubrosOrden.map(rubro => {
+        const itemsRubro = items.filter(i => i.rubro === rubro);
+        if (itemsRubro.length === 0) return '';
+        return `
+          <div class="bg-stone-50 rounded-2xl p-4 border border-stone-200/80">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-700 mb-3 flex items-center gap-1.5">
+              <span>${iconos[rubro] || '📦'}</span> ${rubro}
+            </h4>
+            <ul class="space-y-2">
+              ${itemsRubro.map(it => {
+                const ok = !!estado.comprados[it.clave];
+                const numId = idPorClave[it.clave];
+                return `
+                  <li onclick="toggleCompradoPorId('${numId}')" class="flex items-center justify-between gap-2 p-2 rounded-xl bg-white border border-stone-200/60 cursor-pointer hover:border-emerald-300 transition">
+                    <div class="flex items-center gap-2.5">
+                      <input type="checkbox" ${ok ? 'checked' : ''} class="w-4 h-4 accent-emerald-600 rounded pointer-events-none" />
+                      <span class="text-xs sm:text-sm ${ok ? 'line-through text-stone-400' : 'text-stone-800 font-medium'}">${escaparAtributo(it.nombre)}</span>
+                    </div>
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg shrink-0">${it.cantidad} ${it.unidad}</span>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderizarTodo() {
+      renderizarDias();
+      renderizarCompras();
+    }
+
+    function copiarMenuWhatsApp() {
+      let texto = `🌳 *Menú QuintaLosTilos*\n\n`;
+      DIAS.forEach(d => {
+        const p = estado.dias[d].comensales;
+        const a = estado.dias[d].almuerzo.plato || '-';
+        const c = estado.dias[d].cena.plato || '-';
+        texto += `*${d}* (${p} pers.)\n☀️ Almuerzo: ${a}\n🌙 Cena: ${c}\n\n`;
+      });
+      navigator.clipboard.writeText(texto.trim());
+      mostrarToast('Menú copiado para WhatsApp');
+    }
+
+    function copiarListaWhatsApp() {
+      const { items } = calcularConsolidado();
+      if (items.length === 0) return;
+      let texto = `🛒 *Total de Insumos — QuintaLosTilos*\n\n`;
+      const rubros = [...new Set(items.map(i => i.rubro))];
+      rubros.forEach(r => {
+        texto += `*${r}*\n`;
+        items.filter(i => i.rubro === r).forEach(i => {
+          texto += `${estado.comprados[i.clave] ? '✅' : '⬜'} ${i.nombre} (${i.cantidad} ${i.unidad})\n`;
+        });
+        texto += '\n';
+      });
+      navigator.clipboard.writeText(texto.trim());
+      mostrarToast('Lista copiada para WhatsApp');
+    }
+
+    function abrirModalSync() {
+      document.getElementById('input-firebase-url').value = obtenerFirebaseUrl();
+      document.getElementById('modal-sync').classList.remove('hidden');
+    }
+
+    function cerrarModalSync() {
+      document.getElementById('modal-sync').classList.add('hidden');
+    }
+
+    async function guardarFirebaseUrl() {
+      const val = document.getElementById('input-firebase-url').value.trim().replace(/\/+$/, '');
+      localStorage.setItem(FIREBASE_URL_KEY, val);
+      cerrarModalSync();
+      actualizarBadgeSync();
+      await guardarDatos();
+      await cargarDatos();
+      mostrarToast('Sincronización actualizada');
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>

@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="QuintaLosTilos" />
-  <title>QuintaLosTilos - Planificador de Comidas</title>
+  <title>QuintaLosTilos - Planificador Compartido</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,125 +20,70 @@
     }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
-<body class="text-stone-800 antialiased pb-16">
+<body class="text-stone-800 antialiased pb-20">
 
   <!-- Header -->
-  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-2.5">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl shadow-sm">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-xl shadow-xs">
           🌳
         </div>
         <div>
-          <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-stone-900 leading-none">
-            Quinta<span class="text-emerald-600">LosTilos</span>
-          </h1>
-          <p class="text-xs text-stone-500 mt-0.5">Menú de verano e insumos inteligentes</p>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-stone-900 leading-none">
+              Quinta<span class="text-emerald-600">LosTilos</span>
+            </h1>
+            <span id="badge-sync" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              Local
+            </span>
+          </div>
+          <p class="text-xs text-stone-500 mt-0.5">Menú por día, ingredientes e insumos compartidos</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- Control de Comensales -->
-        <div class="flex items-center bg-stone-100 rounded-xl p-1 border border-stone-200/80">
-          <span class="text-xs font-semibold text-stone-500 px-2 hidden sm:inline">Comensales:</span>
-          <span class="text-xs font-semibold text-stone-500 px-1.5 sm:hidden">👥</span>
-          <button type="button" onclick="cambiarComensales(-1)" class="w-7 h-7 rounded-lg bg-white text-stone-700 font-bold shadow-xs hover:bg-stone-50 active:scale-95 transition">-</button>
-          <span id="comensales-count" class="w-8 text-center font-extrabold text-sm text-emerald-700">6</span>
-          <button type="button" onclick="cambiarComensales(1)" class="w-7 h-7 rounded-lg bg-white text-stone-700 font-bold shadow-xs hover:bg-stone-50 active:scale-95 transition">+</button>
-        </div>
-
-        <!-- Botón API Key -->
-        <button type="button" onclick="abrirModalApi()" title="Configurar clave de IA" class="p-2 rounded-xl bg-stone-100 hover:bg-stone-200/70 text-stone-600 border border-stone-200/80 transition">
-          🔑
+        <button type="button" onclick="generarTotalInsumos()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm py-2 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 transition active:scale-[0.98]">
+          <span>🛒</span>
+          <span>Total de Insumos</span>
+        </button>
+        <button type="button" onclick="abrirModalSync()" title="Configurar vista compartida" class="p-2 rounded-xl bg-stone-100 hover:bg-stone-200/70 text-stone-700 border border-stone-200 text-xs font-bold transition">
+          ☁️
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 pt-5 space-y-6">
+  <main class="max-w-6xl mx-auto px-4 pt-5 space-y-6">
 
-    <!-- Barra de acciones principales -->
-    <section class="flex flex-col sm:flex-row gap-2.5">
-      <button type="button" onclick="abrirModalSugerir()" class="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition active:scale-[0.99]">
-        <span>✨</span>
-        <span>Sugerir Menú Semanal con IA</span>
-      </button>
-      <button type="button" onclick="generarListaCompras()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition active:scale-[0.99]">
-        <span>🛒</span>
-        <span>Generar Lista de Insumos</span>
-      </button>
-    </section>
-
-    <!-- Ideas rápidas + Sobras -->
-    <section class="bg-white rounded-2xl p-3.5 border border-stone-200/80 shadow-2xs">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-stone-400">Toque rápido (asigna al próximo turno libre)</span>
-        <button type="button" onclick="limpiarSemana()" class="text-xs font-semibold text-rose-500 hover:text-rose-600">Limpiar todo</button>
-      </div>
-      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        <button type="button" onclick="asignarRapido('Comer las sobras')" class="shrink-0 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold flex items-center gap-1.5 transition">
-          <span>♻️</span> Comer las sobras
-        </button>
-        <button type="button" onclick="asignarRapido('Ensalada César con pollo grillado')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
-          🥗 Ensalada César con pollo
-        </button>
-        <button type="button" onclick="asignarRapido('Tarta caprese y ensalada verde')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
-          🥧 Tarta caprese
-        </button>
-        <button type="button" onclick="asignarRapido('Asado con ensalada mixta y provoleta')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
-          🥩 Asado y ensalada
-        </button>
-        <button type="button" onclick="asignarRapido('Tortilla de papas y tomate partido')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
-          🍳 Tortilla de papas
-        </button>
-        <button type="button" onclick="asignarRapido('Fajitas de carne y vegetales')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
-          🌮 Fajitas completas
-        </button>
-        <button type="button" onclick="asignarRapido('Pastel de papas')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
-          🥘 Pastel de papas
-        </button>
-        <button type="button" onclick="asignarRapido('Ensalada de papa y huevo')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
-          🥚 Ensalada de papa y huevo
-        </button>
-      </div>
-    </section>
-
-    <!-- Grilla Semanal -->
-    <section>
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-base font-extrabold text-stone-800">Planificación Semanal</h2>
-        <button type="button" onclick="copiarMenuWhatsApp()" class="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition">
-          📲 Copiar menú para WhatsApp
-        </button>
-      </div>
-      <div id="grid-dias" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-        <!-- Renderizado dinámico -->
-      </div>
-    </section>
-
-    <!-- Panel de Lista de Compras -->
-    <section id="panel-compras" class="hidden bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
-      <div class="bg-emerald-900 text-white p-5 flex flex-wrap items-center justify-between gap-3">
+    <!-- Panel Total de Insumos (se muestra arriba al tocar el botón) -->
+    <section id="panel-compras" class="hidden bg-white rounded-3xl border-2 border-emerald-600/20 shadow-md overflow-hidden">
+      <div class="bg-emerald-900 text-white p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="text-lg font-extrabold flex items-center gap-2">
-            <span>🛒</span> Lista de compras — QuintaLosTilos
+          <h2 class="text-base sm:text-lg font-extrabold flex items-center gap-2">
+            <span>🛒</span> Total de Insumos de la Semana
           </h2>
-          <p id="subtitulo-compras" class="text-xs text-emerald-200 mt-0.5">Calculado para 6 comensales</p>
+          <p id="subtitulo-compras" class="text-xs text-emerald-200 mt-0.5">Suma consolidada de todos los días activos</p>
         </div>
-        <button type="button" onclick="copiarListaWhatsApp()" class="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs transition">
-          📲 Copiar lista para WhatsApp
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="copiarListaWhatsApp()" class="bg-emerald-400 hover:bg-emerald-300 text-emerald-950 font-extrabold text-xs px-3 py-2 rounded-xl transition">
+            📲 Copiar para WhatsApp
+          </button>
+          <button type="button" onclick="cerrarPanelCompras()" class="bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold px-2.5 py-2 rounded-xl transition">
+            ✕
+          </button>
+        </div>
       </div>
 
-      <!-- Aviso de sobras -->
-      <div id="aviso-sobras" class="hidden bg-amber-50 border-b border-amber-200 px-5 py-2.5 text-xs text-amber-800 font-medium flex items-center gap-2">
+      <div id="aviso-sobras" class="hidden bg-amber-50 border-b border-amber-200 px-5 py-2 text-xs text-amber-800 font-semibold flex items-center gap-2">
         <span>♻️</span>
         <span id="texto-aviso-sobras"></span>
       </div>
 
-      <!-- Barra de progreso -->
       <div class="px-5 pt-4">
         <div class="flex justify-between text-xs font-bold text-stone-500 mb-1.5">
           <span>Progreso en el súper</span>
@@ -149,491 +94,39 @@
         </div>
       </div>
 
-      <div id="contenedor-rubros" class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Rubros renderizados aquí -->
-      </div>
+      <div id="contenedor-rubros" class="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </section>
 
-  </main>
-
-  <footer class="max-w-5xl mx-auto px-4 mt-10 text-center text-xs text-stone-400">
-    QuintaLosTilos · Organizador de comidas de verano
-  </footer>
-
-  <!-- Modal Sugerir Menú IA -->
-  <div id="modal-sugerir" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-stone-100 space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-extrabold text-stone-900">✨ Armar menú de verano</h3>
-        <button type="button" onclick="cerrarModalSugerir()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
-      </div>
-      <p class="text-xs text-stone-500">Contale a la IA qué estilo de comidas preferís esta semana en la quinta.</p>
-
-      <div>
-        <label class="block text-xs font-bold text-stone-700 mb-1">Preferencias o restricciones</label>
-        <input id="input-preferencias" type="text" placeholder="Ej: comidas frescas, sin prender mucho el horno, algo de parrilla..." class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-emerald-500" />
-      </div>
-
-      <label class="flex items-center justify-between p-3 rounded-2xl bg-amber-50/70 border border-amber-200 cursor-pointer">
-        <div class="pr-2">
-          <span class="block text-xs font-extrabold text-amber-900">♻️ Incluir turnos de sobras</span>
-          <span class="block text-[11px] text-amber-700">Planifica platos rendidores y reutiliza al día siguiente</span>
+    <!-- Barra de ideas rápidas y utilidades -->
+    <section class="bg-white rounded-2xl p-3.5 border border-stone-200/80 shadow-2xs space-y-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-stone-400">Carga rápida al próximo turno libre</span>
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="copiarMenuWhatsApp()" class="text-xs font-bold text-emerald-700 hover:underline">
+            📲 Copiar menú
+          </button>
+          <button type="button" onclick="limpiarSemana()" class="text-xs font-semibold text-rose-500 hover:underline">
+            Limpiar semana
+          </button>
         </div>
-        <input id="check-sobras-ia" type="checkbox" checked class="w-5 h-5 accent-amber-600 rounded" />
-      </label>
-
-      <div class="flex gap-2 pt-2">
-        <button type="button" onclick="cerrarModalSugerir()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-sm">Cancelar</button>
-        <button id="btn-confirmar-ia" type="button" onclick="ejecutarSugerenciaIA()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm">Generar semana</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Modal API Key -->
-  <div id="modal-api" class="fixed inset-0 z-50 hidden bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-stone-100 space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-extrabold text-stone-900">🔑 Clave de Gemini AI</h3>
-        <button type="button" onclick="cerrarModalApi()" class="text-stone-400 hover:text-stone-600 text-xl font-bold">&times;</button>
-      </div>
-      <p class="text-xs text-stone-600 leading-relaxed">
-        Pegá tu clave gratuita de <strong>Google AI Studio</strong> (se guarda solo en este dispositivo para generar menús y listas de compras).
-      </p>
-      <input id="input-api-key" type="password" placeholder="AQ.... o AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm font-mono focus:outline-none focus:border-emerald-500" />
-      <div class="flex gap-2 pt-1">
-        <button type="button" onclick="cerrarModalApi()" class="flex-1 py-2.5 rounded-xl bg-stone-100 text-stone-600 font-bold text-sm">Cerrar</button>
-        <button type="button" onclick="guardarApiKey()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm">Guardar clave</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast notificación -->
-  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-stone-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-opacity duration-300"></div>
-
-  <script>
-    const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    const STORAGE_KEY = 'quintalostilos_data_v1';
-    const API_STORAGE_KEY = 'quintalostilos_gemini_key';
-    const CLAVE_INICIAL = '';
-
-    let estado = {
-      comensales: 6,
-      menu: {
-        Lunes: { almuerzo: '', cena: '' },
-        Martes: { almuerzo: '', cena: '' },
-        Miércoles: { almuerzo: '', cena: '' },
-        Jueves: { almuerzo: '', cena: '' },
-        Viernes: { almuerzo: '', cena: '' },
-        Sábado: { almuerzo: '', cena: '' },
-        Domingo: { almuerzo: '', cena: '' }
-      },
-      listaCompras: []
-    };
-
-    function cargarEstado() {
-      const guardado = localStorage.getItem(STORAGE_KEY);
-      if (guardado) {
-        try {
-          const parsed = JSON.parse(guardado);
-          estado = {
-            ...estado,
-            ...parsed,
-            menu: { ...estado.menu, ...(parsed.menu || {}) }
-          };
-        } catch (e) {}
-      }
-      if (CLAVE_INICIAL && !localStorage.getItem(API_STORAGE_KEY)) {
-        localStorage.setItem(API_STORAGE_KEY, CLAVE_INICIAL);
-      }
-      document.getElementById('comensales-count').textContent = estado.comensales;
-    }
-
-    function guardarEstado() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
-    }
-
-    function mostrarToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.remove('opacity-0');
-      setTimeout(() => t.classList.add('opacity-0'), 3500);
-    }
-
-    function esTurnoSobras(texto) {
-      if (!texto) return false;
-      return /sobra|recalentado|lo que qued/i.test(texto);
-    }
-
-    function cambiarComensales(delta) {
-      estado.comensales = Math.max(1, Math.min(30, estado.comensales + delta));
-      document.getElementById('comensales-count').textContent = estado.comensales;
-      guardarEstado();
-      renderizarCompras();
-    }
-
-    function actualizarComida(dia, turno, valor) {
-      estado.menu[dia][turno] = valor;
-      guardarEstado();
-      renderizarDias();
-    }
-
-    function ponerSobrasEnTurno(dia, turno) {
-      estado.menu[dia][turno] = 'Comer las sobras';
-      guardarEstado();
-      renderizarDias();
-      mostrarToast(`♻️ Sobras asignadas al ${turno} del ${dia}`);
-    }
-
-    function asignarRapido(plato) {
-      for (const dia of DIAS) {
-        for (const turno of ['almuerzo', 'cena']) {
-          if (!estado.menu[dia][turno].trim()) {
-            estado.menu[dia][turno] = plato;
-            guardarEstado();
-            renderizarDias();
-            mostrarToast(`Agregado al ${turno} del ${dia}`);
-            return;
-          }
-        }
-      }
-      mostrarToast('Todos los turnos de la semana ya están ocupados');
-    }
-
-    function limpiarSemana() {
-      DIAS.forEach(d => estado.menu[d] = { almuerzo: '', cena: '' });
-      estado.listaCompras = [];
-      document.getElementById('panel-compras').classList.add('hidden');
-      guardarEstado();
-      renderizarDias();
-      mostrarToast('Semana limpiada');
-    }
-
-    function renderizarDias() {
-      const contenedor = document.getElementById('grid-dias');
-      contenedor.innerHTML = DIAS.map(dia => {
-        const alm = estado.menu[dia].almuerzo || '';
-        const cen = estado.menu[dia].cena || '';
-        const almSobras = esTurnoSobras(alm);
-        const cenSobras = esTurnoSobras(cen);
-
-        return `
-          <div class="bg-white rounded-2xl p-4 border border-stone-200/90 shadow-2xs flex flex-col gap-3">
-            <div class="flex items-center justify-between border-b border-stone-100 pb-2">
-              <h3 class="font-extrabold text-stone-800 text-sm">${dia}</h3>
-              <span class="text-[11px] font-semibold text-stone-400">${(alm ? 1 : 0) + (cen ? 1 : 0)}/2 comidas</span>
-            </div>
-
-            <!-- Almuerzo -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between">
-                <label class="text-[11px] font-bold uppercase tracking-wider text-amber-600 flex items-center gap-1">
-                  ☀️ Almuerzo
-                </label>
-                ${almSobras
-                  ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">♻️ Sobras / Sin compras</span>`
-                  : (!alm.trim() ? `<button type="button" onclick="ponerSobrasEnTurno('${dia}', 'almuerzo')" class="text-[10px] font-bold text-amber-700 hover:bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 transition">♻️ + Sobras</button>` : '')
-                }
-              </div>
-              <input
-                type="text"
-                value="${alm.replace(/"/g, '&quot;')}"
-                onchange="actualizarComida('${dia}', 'almuerzo', this.value)"
-                placeholder="Ej: Ensalada completa..."
-                class="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border ${almSobras ? 'bg-amber-50/60 border-amber-300 text-amber-950 font-semibold' : 'bg-stone-50/70 border-stone-200 text-stone-800'} focus:bg-white focus:outline-none focus:border-emerald-500 transition"
-              />
-            </div>
-
-            <!-- Cena -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between">
-                <label class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-1">
-                  🌙 Cena
-                </label>
-                ${cenSobras
-                  ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">♻️ Sobras / Sin compras</span>`
-                  : (!cen.trim() ? `<button type="button" onclick="ponerSobrasEnTurno('${dia}', 'cena')" class="text-[10px] font-bold text-amber-700 hover:bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 transition">♻️ + Sobras</button>` : '')
-                }
-              </div>
-              <input
-                type="text"
-                value="${cen.replace(/"/g, '&quot;')}"
-                onchange="actualizarComida('${dia}', 'cena', this.value)"
-                placeholder="Ej: Asado o tarta..."
-                class="w-full text-xs sm:text-sm px-3 py-2 rounded-xl border ${cenSobras ? 'bg-amber-50/60 border-amber-300 text-amber-950 font-semibold' : 'bg-stone-50/70 border-stone-200 text-stone-800'} focus:bg-white focus:outline-none focus:border-emerald-500 transition"
-              />
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function obtenerApiKey() {
-      return localStorage.getItem(API_STORAGE_KEY) || '';
-    }
-
-    function abrirModalApi() {
-      document.getElementById('input-api-key').value = obtenerApiKey();
-      document.getElementById('modal-api').classList.remove('hidden');
-    }
-
-    function cerrarModalApi() {
-      document.getElementById('modal-api').classList.add('hidden');
-    }
-
-    function guardarApiKey() {
-      const val = document.getElementById('input-api-key').value.trim();
-      localStorage.setItem(API_STORAGE_KEY, val);
-      cerrarModalApi();
-      mostrarToast(val ? 'Clave guardada correctamente' : 'Clave eliminada');
-    }
-
-    async function llamarGemini(promptTexto) {
-      const apiKey = obtenerApiKey();
-      if (!apiKey) {
-        abrirModalApi();
-        throw new Error('Falta configurar la clave de Gemini AI');
-      }
-
-      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: promptTexto }] }],
-          generationConfig: { responseMimeType: 'application/json' }
-        })
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `Error ${res.status} al conectar con Gemini`);
-      }
-
-      const data = await res.json();
-      const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      return JSON.parse(texto);
-    }
-
-    function abrirModalSugerir() {
-      document.getElementById('modal-sugerir').classList.remove('hidden');
-    }
-
-    function cerrarModalSugerir() {
-      document.getElementById('modal-sugerir').classList.add('hidden');
-    }
-
-    async function ejecutarSugerenciaIA() {
-      const prefs = document.getElementById('input-preferencias').value.trim() || 'comidas frescas de verano argentino, prácticas y variadas';
-      const incluirSobras = document.getElementById('check-sobras-ia').checked;
-      const btn = document.getElementById('btn-confirmar-ia');
-
-      btn.disabled = true;
-      btn.textContent = 'Pensando menú...';
-
-      const reglaSobras = incluirSobras
-        ? 'Incluí estratégicamente entre 3 y 4 turnos de "Comer las sobras (de [plato anterior])" después de comidas rendidoras (como asado, tartas, pastel de papas, carnes al horno o ensaladas abundantes).'
-        : 'No incluyas turnos de sobras; proponé un plato distinto en cada turno.';
-
-      const prompt = `
-        Sos un chef organizador de comidas de verano en Argentina para una quinta familiar de ${estado.comensales} personas.
-        Armá un menú semanal completo (Lunes a Domingo, almuerzo y cena).
-        Preferencias del usuario: ${prefs}.
-        ${reglaSobras}
-        Devolvé ÚNICAMENTE un JSON válido con esta estructura exacta:
-        {
-          "Lunes": { "almuerzo": "...", "cena": "..." },
-          "Martes": { "almuerzo": "...", "cena": "..." },
-          "Miércoles": { "almuerzo": "...", "cena": "..." },
-          "Jueves": { "almuerzo": "...", "cena": "..." },
-          "Viernes": { "almuerzo": "...", "cena": "..." },
-          "Sábado": { "almuerzo": "...", "cena": "..." },
-          "Domingo": { "almuerzo": "...", "cena": "..." }
-        }
-      `;
-
-      try {
-        const resultado = await llamarGemini(prompt);
-        DIAS.forEach(d => {
-          if (resultado[d]) {
-            estado.menu[d] = {
-              almuerzo: resultado[d].almuerzo || '',
-              cena: resultado[d].cena || ''
-            };
-          }
-        });
-        guardarEstado();
-        renderizarDias();
-        cerrarModalSugerir();
-        mostrarToast('✨ ¡Menú semanal generado!');
-      } catch (e) {
-        mostrarToast(e.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Generar semana';
-      }
-    }
-
-    async function generarListaCompras() {
-      const comidasACocinar = [];
-      let cantidadSobras = 0;
-
-      DIAS.forEach(dia => {
-        ['almuerzo', 'cena'].forEach(turno => {
-          const plato = (estado.menu[dia][turno] || '').trim();
-          if (!plato) return;
-          if (esTurnoSobras(plato)) {
-            cantidadSobras++;
-          } else {
-            comidasACocinar.push(`${dia} (${turno}): ${plato}`);
-          }
-        });
-      });
-
-      if (comidasACocinar.length === 0) {
-        mostrarToast('Cargá al menos una comida (que no sea sobras) para armar la lista');
-        return;
-      }
-
-      mostrarToast('🛒 Calculando insumos para ' + estado.comensales + ' personas...');
-
-      const prompt = `
-        Calculá la lista de compras consolidada para ${estado.comensales} comensales en Argentina, sumando ingredientes repetidos entre recetas y usando unidades prácticas de supermercado argentino (kg, gramos, paquetes, unidades, litros).
-        Comidas a preparar:
-        ${comidasACocinar.join('\n')}
-
-        Devolvé ÚNICAMENTE un JSON válido con este formato:
-        {
-          "items": [
-            { "rubro": "Verdulería", "nombre": "Tomate perita", "cantidad": "2 kg" },
-            { "rubro": "Carnicería y Pescadería", "nombre": "Pechuga de pollo", "cantidad": "1.5 kg" },
-            { "rubro": "Lácteos y Fiambres", "nombre": "Queso cremoso", "cantidad": "600 g" },
-            { "rubro": "Almacén y Panadería", "nombre": "Tapas de tarta", "cantidad": "2 paquetes" }
-          ]
-        }
-        Usá únicamente estos 4 nombres de rubro: "Verdulería", "Carnicería y Pescadería", "Lácteos y Fiambres", "Almacén y Panadería".
-      `;
-
-      try {
-        const res = await llamarGemini(prompt);
-        estado.listaCompras = (res.items || []).map((it, idx) => ({
-          id: idx + '_' + Date.now(),
-          rubro: it.rubro || 'Almacén y Panadería',
-          nombre: it.nombre,
-          cantidad: it.cantidad,
-          comprado: false
-        }));
-        guardarEstado();
-        renderizarCompras(cantidadSobras);
-        document.getElementById('panel-compras').scrollIntoView({ behavior: 'smooth' });
-      } catch (e) {
-        mostrarToast(e.message);
-      }
-    }
-
-    function toggleItemComprado(id) {
-      const item = estado.listaCompras.find(i => i.id === id);
-      if (item) {
-        item.comprado = !item.comprado;
-        guardarEstado();
-        actualizarProgreso();
-        renderizarCompras();
-      }
-    }
-
-    function actualizarProgreso() {
-      const total = estado.listaCompras.length;
-      const listos = estado.listaCompras.filter(i => i.comprado).length;
-      document.getElementById('progreso-texto').textContent = `${listos} / ${total}`;
-      document.getElementById('progreso-barra').style.width = total ? `${(listos / total) * 100}%` : '0%';
-    }
-
-    function renderizarCompras(cantidadSobras = null) {
-      const panel = document.getElementById('panel-compras');
-      if (!estado.listaCompras || estado.listaCompras.length === 0) {
-        panel.classList.add('hidden');
-        return;
-      }
-
-      panel.classList.remove('hidden');
-      document.getElementById('subtitulo-compras').textContent = `Calculado para ${estado.comensales} comensales`;
-
-      if (cantidadSobras !== null) {
-        const aviso = document.getElementById('aviso-sobras');
-        if (cantidadSobras > 0) {
-          aviso.classList.remove('hidden');
-          document.getElementById('texto-aviso-sobras').textContent =
-            `${cantidadSobras} turno${cantidadSobras > 1 ? 's' : ''} cubierto${cantidadSobras > 1 ? 's' : ''} con sobras (no se sumaron insumos extra).`;
-        } else {
-          aviso.classList.add('hidden');
-        }
-      }
-
-      actualizarProgreso();
-
-      const rubrosOrden = ['Verdulería', 'Carnicería y Pescadería', 'Lácteos y Fiambres', 'Almacén y Panadería'];
-      const iconos = {
-        'Verdulería': '🥬',
-        'Carnicería y Pescadería': '🥩',
-        'Lácteos y Fiambres': '🧀',
-        'Almacén y Panadería': '🥖'
-      };
-
-      const cont = document.getElementById('contenedor-rubros');
-      cont.innerHTML = rubrosOrden.map(rubro => {
-        const items = estado.listaCompras.filter(i => i.rubro === rubro);
-        if (items.length === 0) return '';
-        return `
-          <div class="bg-stone-50 rounded-2xl p-4 border border-stone-200/80">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-700 mb-3 flex items-center gap-1.5">
-              <span>${iconos[rubro] || '📦'}</span> ${rubro}
-            </h4>
-            <ul class="space-y-2">
-              ${items.map(it => `
-                <li onclick="toggleItemComprado('${it.id}')" class="flex items-center justify-between gap-2 p-2 rounded-xl bg-white border border-stone-200/60 cursor-pointer hover:border-emerald-300 transition">
-                  <div class="flex items-center gap-2.5">
-                    <input type="checkbox" ${it.comprado ? 'checked' : ''} class="w-4 h-4 accent-emerald-600 rounded pointer-events-none" />
-                    <span class="text-xs sm:text-sm ${it.comprado ? 'line-through text-stone-400' : 'text-stone-800 font-medium'}">${it.nombre}</span>
-                  </div>
-                  <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg shrink-0">${it.cantidad}</span>
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function copiarMenuWhatsApp() {
-      let texto = `🌳 *Menú QuintaLosTilos (${estado.comensales} comensales)*\n\n`;
-      DIAS.forEach(d => {
-        const a = estado.menu[d].almuerzo || '-';
-        const c = estado.menu[d].cena || '-';
-        texto += `*${d}*\n☀️ Almuerzo: ${a}\n🌙 Cena: ${c}\n\n`;
-      });
-      navigator.clipboard.writeText(texto.trim());
-      mostrarToast('📲 Menú copiado para WhatsApp');
-    }
-
-    function copiarListaWhatsApp() {
-      let texto = `🛒 *Lista de Súper — QuintaLosTilos (${estado.comensales} personas)*\n\n`;
-      const rubros = [...new Set(estado.listaCompras.map(i => i.rubro))];
-      rubros.forEach(r => {
-        texto += `*${r}*\n`;
-        estado.listaCompras.filter(i => i.rubro === r).forEach(i => {
-          texto += `${i.comprado ? '✅' : '⬜'} ${i.nombre} (${i.cantidad})\n`;
-        });
-        texto += '\n';
-      });
-      navigator.clipboard.writeText(texto.trim());
-      mostrarToast('📲 Lista copiada para WhatsApp');
-    }
-
-    cargarEstado();
-    renderizarDias();
-    renderizarCompras();
-  </script>
-</body>
-</html>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        <button type="button" onclick="asignarRapido('Comer las sobras')" class="shrink-0 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold transition">
+          ♻️ Comer las sobras
+        </button>
+        <button type="button" onclick="asignarRapido('Tarta de verdura')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
+          🥬 Tarta de verdura
+        </button>
+        <button type="button" onclick="asignarRapido('Tarta caprese')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
+          🥧 Tarta caprese
+        </button>
+        <button type="button" onclick="asignarRapido('Asado con ensalada')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
+          🥩 Asado con ensalada
+        </button>
+        <button type="button" onclick="asignarRapido('Ensalada César con pollo')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
+          🥗 Ensalada César
+        </button>
+        <button type="button" onclick="asignarRapido('Tortilla de papas')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition">
+          🍳 Tortilla de papas
+        </button>
+        <button type="button" onclick="asignarRapido('Pastel de papas')" class="shrink-0 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 text-xs font-semibold transition
